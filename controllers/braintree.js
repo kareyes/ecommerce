@@ -1,0 +1,37 @@
+const User = require('../models/auth');
+const braintree = require("braintree")
+require('dotenv').config()
+
+const gateway = new braintree.BraintreeGateway({
+    environment: braintree.Environment.Sandbox,
+    merchantId: process.env.BRAINTREE_MERCHANT_ID,
+    publicKey: process.env.BRAINTREE_PUBLIC_KEY,
+    privateKey:  process.env.BRAINTREE_PRIVATE_KEY
+   });
+
+exports.generateToken = (req, res) =>{
+    gateway.clientToken.generate({},  (err, response) => {
+        if(err){
+            res.status(500).send(err)
+        }else{
+            res.send(response)
+        }
+    })
+}
+exports.processPayment =(req, res) =>{
+    let nonceFromTheClient = req.body.paymentMethodNonce
+    let amountFormTheClient = req.body.amount;
+    let newTransaction = gateway.transaction.sale({
+        amount: amountFormTheClient,
+        paymentMethodNonce: nonceFromTheClient,
+        options: {
+            submitForSettlement: true
+        }
+    }, (error, results) =>{
+        if(error){
+            res.status(500).json(error)
+        }else{
+            res.json(results)
+        }
+    })
+}
